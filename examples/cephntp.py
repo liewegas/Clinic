@@ -4,14 +4,20 @@ import os
 import ipaddress
 import subprocess
 
-def config1(nodecount, offset, freqexpr, delayexprup, delayexprdown = "", refclockexpr = ""):
+def config1(nodecount, offset, freqexpr, delayexprup, delayexprdown = "", refclockexpr = 0):
 
     """ Generate client configs """
     conf = ""
 
     for i in range(1, nodecount + 1):
-        conf += "node{}_offset = {}\n".format(i, i)
-        conf += "node{}_freq = {}\n".format(i, freqexpr)
+        conf += "node{}_offset = {}\n".format(i, i - 1)
+
+        if (i == 1): 
+            conf += "node{}_freq = {}\n".format(i, 0)
+            conf += "node1_refclock = (* 0 0)\n"
+        else: 
+            conf += "node{}_freq = {}\n".format(i, freqexpr)
+
         conf += "node{}_delay1 = {}\n".format(i, delayexprup)
 
         if (delayexprdown != ""):
@@ -19,8 +25,8 @@ def config1(nodecount, offset, freqexpr, delayexprup, delayexprdown = "", refclo
         else:
             conf += "node1_delay{} = {}\n".format(i, delayexprup)
 
-        if (refclockexpr != ""):
-            conf += "node{}_refclock = {}\n".format(i, refclockexpr)
+        # if (refclockexpr != ""):
+        #     conf += "node{}_refclock = {}\n".format(i, refclockexpr)
 
     confFile = open("./tmp/conf", 'w')
 
@@ -54,11 +60,11 @@ def createScript(nodecount, scriptname):
             .format(i, ipaddress.IPv4Address("192.168.123.1")))
 
     """ Start experiment """
-    timeLimit = 40000
+    timeLimit = 100000
 
     script.write("start_server {} -v 2 -o ./tmp/log.timeoffset \
-        -g ./tmp/log.rawoffset -f ./tmp/log.freqoffset -p ./tmp/log.packetdelays \
-        -l {} \n".format(nodecount, timeLimit))
+-g ./tmp/log.rawoffset -f ./tmp/log.freqoffset -p ./tmp/log.packetdelays \
+-l {} \n".format(nodecount, timeLimit))
 
     """ Output statistics """
     script.write("cat tmp/stats\n")
