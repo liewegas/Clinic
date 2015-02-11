@@ -63,7 +63,9 @@ def createScript(nodecount, scriptname):
     timeLimit = 100000
 
     script.write("start_server {} -v 2 -o ./tmp/log.timeoffset \
--g ./tmp/log.rawoffset -f ./tmp/log.freqoffset -p ./tmp/log.packetdelays \
+-g ./tmp/log.rawoffset -f ./tmp/log.freqoffset \
+-a ./tmp/log.ntp_maxerror -b ./tmp/log.ntp_esterror \
+-c ./tmp/log.ntp_offset -p ./tmp/log.packetdelays \
 -l {} \n".format(nodecount, timeLimit))
 
     """ Output statistics """
