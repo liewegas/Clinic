@@ -5,7 +5,6 @@ import ipaddress
 import subprocess
 
 def config1(nodecount, offset, freqexpr, delayexprup, delayexprdown = "", refclockexpr = 0):
-
     """ Generate client configs """
     conf = ""
 
@@ -42,6 +41,31 @@ def config1(nodecount, offset, freqexpr, delayexprup, delayexprdown = "", refclo
         shell=True)
 
 
+def configPerfectClocks(nodecount):
+    """ Generate client configs """
+    conf = ""
+
+    for i in range(1, nodecount + 1):
+        conf += "node{}_offset = 0\n".format(i)     
+        conf += "node{}_freq = 0\n".format(i)
+        conf += "node{}_delay1 = (+ 0 0.001)\n".format(i)
+        conf += "node1_delay{} = (+ 0 0.001)\n".format(i)
+
+    conf += "node1_refclock = (* 0 0)\n"
+
+    confFile = open("./tmp/conf", 'w')
+
+    confFile.write(conf)
+
+    confFile.close()
+
+
+    scriptname = "cephntp.dynamic.test"
+    createScript(nodecount, scriptname)
+
+    subprocess.check_call("./{}".format(scriptname), 
+        shell=True)
+
 
 def createScript(nodecount, scriptname):
 
@@ -60,12 +84,14 @@ def createScript(nodecount, scriptname):
             .format(i, ipaddress.IPv4Address("192.168.123.1")))
 
     """ Start experiment """
-    timeLimit = 100000
+    timeLimit = 20000
 
     script.write("start_server {} -v 2 -o ./tmp/log.timeoffset \
 -g ./tmp/log.rawoffset -f ./tmp/log.freqoffset \
 -a ./tmp/log.ntp_maxerror -b ./tmp/log.ntp_esterror \
--c ./tmp/log.ntp_offset -p ./tmp/log.packetdelays \
+-c ./tmp/log.ntp_offset -d ./tmp/log.ntp_status \
+-e ./tmp/log.monotonic -i ./tmp/log.ntp_timex_offset \
+-p ./tmp/log.packetdelays \
 -l {} \n".format(nodecount, timeLimit))
 
     """ Output statistics """
@@ -97,6 +123,7 @@ def main():
     config1(10, 0.01, "(* 0.0001 (normal))", 
         "(+ 1e-4 (* 7e-3 (poisson 5)))")
 
+    # configPerfectClocks(10)
 
 
 if __name__ == "__main__":
