@@ -123,8 +123,8 @@ def main():
     # config1(10, 0.01, "(* 0.0001 (normal))", 
     #     "(+ 1e-4 (* 7e-3 (poisson 5)))")
 
-    config1(10, 0.01, "(* 0.0001 (normal))", 
-        "(+ 3.9e-3 (* 5e-3 (exponential)))")
+    config1(10, 0.01, "(sum (* 1e-8 (normal)))", 
+        "(+ 1e-3 (* 1e-3 (exponential)))")
 
     # configPerfectClocks(10)
 
