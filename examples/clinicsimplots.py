@@ -1,6 +1,7 @@
 import sys
 import numpy as np
 import matplotlib.pyplot as plt
+import pylab
 
 def main():
     fileName = "tmp/log.timeoffset"
@@ -73,8 +74,8 @@ def main():
     plt.xlabel("Time (s)")
     plt.ylabel("Offset, Uncertainty (s)")
     plt.title("(NTP Offset - True Offset) vs Time")
-
-    plt.show()
+    pylab.savefig("images/offsetvstime.png")
+    main2()
 
 def main2():
     fileName = "tmp/log.ntp_maxerror"
@@ -111,8 +112,7 @@ def main2():
     plt.xlabel("Time (s)")
     plt.ylabel("Uncertainty (s)")
     plt.title("Uncertainty and Latency vs. Time")
-
-    plt.show()
+    pylab.savefig("images/latency.png")
 
 
 if __name__ == "__main__":
