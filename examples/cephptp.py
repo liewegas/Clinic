@@ -76,12 +76,31 @@ def createScript(nodecount, scriptname):
     script.write("CLKNETSIM_PATH=..\n")
     script.write(". ../clknetsim.bash\n")
 
+    ptpconfig = """
+ptpengine:interface=eth0
+ptpengine:domain=0
+ptpengine:ip_mode={}
+ptpengine:use_libpcap=n
+ptpengine:preset=masteronly
+global:log_status=y
+global:verbose_foreground=Y
+{}
+
+"""
+
+    ptpserverconf = ptpconfig.format("hybrid", 
+        "ptpengine:ptp_timesource=PTP")
+    ptpclientconf = ptpconfig.format("unicast", 
+        "ptpengine:unicast_address=192.168.123.1")
+
     """ Start clients """
-    script.write("""start_client 1 ptpd2 "ptpengine:preset=masteronly" \n""")
+    script.write(
+    """start_client 1 ptpd2 "{}" \n""".format(ptpserverconf)
+    )
 
     for i in range(2, nodecount + 1):
-        script.write("""start_client {} ptpd2 "ptpengine:preset=slaveonly" \n"""
-            .format(i))
+        script.write("""start_client {} ptpd2 "{}" \n"""
+            .format(i, ptpclientconf))
 
     """ Start experiment """
     timeLimit = 20000
