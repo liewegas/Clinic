@@ -12,8 +12,10 @@ def config1(nodecount, offset, freqexpr, delayexprup, delayexprdown = "", refclo
         conf += "node{}_offset = {}\n".format(i, i - 1)
 
         if (i == 1): 
-            conf += "node{}_freq = {}\n".format(i, 0)
+            conf += "node{}_freq = {}\n".format(i, freqexpr)
             conf += "node1_refclock = (* 0 0)\n"
+            # conf += "node1_refclock = (sum (* 1e-8 (normal)))\n"
+            
         else: 
             conf += "node{}_freq = {}\n".format(i, freqexpr)
 
@@ -77,10 +79,15 @@ def createScript(nodecount, scriptname):
     script.write(". ../clknetsim.bash\n")
 
     """ Start clients """
-    script.write("""start_client 1 ntp "server 127.127.1.0" \n""")
+    # script.write(
+    #     """start_client 1 ntp "server 127.127.1.0\nfudge 127.127.1.0 stratum 0" \n"""
+    #     )
+    script.write(
+        """start_client 1 ntp "server 127.127.28.0" \n"""
+        )
 
     for i in range(2, nodecount + 1):
-        script.write("""start_client {} ntp "server {} minpoll 6 maxpoll 6" \n"""
+        script.write("""start_client {} ntp "server {} minpoll 4 maxpoll 6" \n"""
             .format(i, ipaddress.IPv4Address("192.168.123.1")))
 
     """ Start experiment """
