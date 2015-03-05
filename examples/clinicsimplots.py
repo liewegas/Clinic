@@ -1,3 +1,5 @@
+#!/usr/bin/env python2
+
 import sys
 import numpy as np
 import matplotlib.pyplot as plt
@@ -116,4 +118,4 @@ def main2():
 
 
 if __name__ == "__main__":
-    main2()
+    main()

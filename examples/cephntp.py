@@ -12,9 +12,9 @@ def config1(nodecount, offset, freqexpr, delayexprup, delayexprdown = "", refclo
         conf += "node{}_offset = {}\n".format(i, i - 1)
 
         if (i == 1): 
-            conf += "node{}_freq = {}\n".format(i, freqexpr)
+            #conf += "node{}_freq = {}\n".format(i, freqexpr)
             conf += "node1_refclock = (* 0 0)\n"
-            # conf += "node1_refclock = (sum (* 1e-8 (normal)))\n"
+            conf += "node1_refclock = (sum (* 1e-8 (normal)))\n"
             
         else: 
             conf += "node{}_freq = {}\n".format(i, freqexpr)
@@ -25,6 +25,43 @@ def config1(nodecount, offset, freqexpr, delayexprup, delayexprdown = "", refclo
             conf += "node1_delay{} = {}\n".format(i, delayexprdown)
         else:
             conf += "node1_delay{} = {}\n".format(i, delayexprup)
+
+        # if (refclockexpr != ""):
+        #     conf += "node{}_refclock = {}\n".format(i, refclockexpr)
+
+    confFile = open("./tmp/conf", 'w')
+
+    confFile.write(conf)
+
+    confFile.close()
+
+
+    scriptname = "cephntp.dynamic.test"
+    createScript(nodecount, scriptname)
+
+    subprocess.check_call("./{}".format(scriptname), 
+        shell=True)
+
+# config2 is used to give each node a different file for the delay expression.
+# it assumes that the files are of a consistent format.
+def config2(nodecount, offset, freqexpr, refclockexpr = 0):
+    """ Generate client configs """
+    conf = ""
+
+    for i in range(1, nodecount + 1):
+        conf += "node{}_offset = {}\n".format(i, i - 1)
+
+        if (i == 1): 
+            #conf += "node{}_freq = {}\n".format(i, freqexpr)
+            conf += "node1_refclock = (* 0 0)\n"
+            conf += "node1_refclock = (sum (* 1e-8 (normal)))\n"
+            
+        else: 
+            conf += "node{}_freq = {}\n".format(i, freqexpr)
+
+        conf += "node{}_delay1 = (file \"latencyValues{}.txt\")\n".format(i, i)
+        # we use a different latency file for the return trip than for the initial trip
+        conf += "node1_delay{} = (file \"latencyValues{}.txt\")\n".format(i, i + (nodecount - 1))
 
         # if (refclockexpr != ""):
         #     conf += "node{}_refclock = {}\n".format(i, refclockexpr)
@@ -79,12 +116,12 @@ def createScript(nodecount, scriptname):
     script.write(". ../clknetsim.bash\n")
 
     """ Start clients """
-    # script.write(
-    #     """start_client 1 ntp "server 127.127.1.0\nfudge 127.127.1.0 stratum 0" \n"""
-    #     )
     script.write(
-        """start_client 1 ntp "server 127.127.28.0" \n"""
+        """start_client 1 ntp "server 127.127.1.0" \n"""
         )
+    #script.write(
+    #    """start_client 1 ntp "server 127.127.28.0" \n"""
+    #    )
 
     for i in range(2, nodecount + 1):
         script.write("""start_client {} ntp "server {} minpoll 4 maxpoll 6" \n"""
@@ -130,8 +167,9 @@ def main():
     # config1(10, 0.01, "(* 0.0001 (normal))", 
     #     "(+ 1e-4 (* 7e-3 (poisson 5)))")
 
-    config1(10, 0.01, "(sum (* 1e-8 (normal)))", 
-        "(+ 1e-3 (* 1e-3 (exponential)))")
+    # config1(10, 0.01, "(sum (* 1e-8 (normal)))", 
+    #     "(+ 1e-3 (* 1e-3 (exponential)))")
+
 
     # configPerfectClocks(10)
 

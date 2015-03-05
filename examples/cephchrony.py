@@ -12,8 +12,9 @@ def config1(nodecount, offset, freqexpr, delayexprup, delayexprdown = "", refclo
         conf += "node{}_offset = {}\n".format(i, i - 1)
 
         if (i == 1): 
-            conf += "node{}_freq = {}\n".format(i, 0)
+            conf += "node{}_freq = {}\n".format(i, freqexpr)
             conf += "node1_refclock = (* 0 0)\n"
+            
         else: 
             conf += "node{}_freq = {}\n".format(i, freqexpr)
 
@@ -24,8 +25,6 @@ def config1(nodecount, offset, freqexpr, delayexprup, delayexprdown = "", refclo
         else:
             conf += "node1_delay{} = {}\n".format(i, delayexprup)
 
-        # if (refclockexpr != ""):
-        #     conf += "node{}_refclock = {}\n".format(i, refclockexpr)
 
     confFile = open("./tmp/conf", 'w')
 
@@ -34,7 +33,7 @@ def config1(nodecount, offset, freqexpr, delayexprup, delayexprdown = "", refclo
     confFile.close()
 
 
-    scriptname = "cephptp.dynamic.test"
+    scriptname = "cephchrony.dynamic.test"
     createScript(nodecount, scriptname)
 
     subprocess.check_call("./{}".format(scriptname), 
@@ -50,31 +49,14 @@ def createScript(nodecount, scriptname):
     script.write("CLKNETSIM_PATH=..\n")
     script.write(". ../clknetsim.bash\n")
 
-    ptpconfig = """
-ptpengine:interface=eth0
-ptpengine:domain=0
-ptpengine:ip_mode={}
-ptpengine:use_libpcap=n
-ptpengine:preset=masteronly
-global:log_status=y
-global:verbose_foreground=Y
-{}
-
-"""
-
-    ptpserverconf = ptpconfig.format("hybrid", 
-        "ptpengine:ptp_timesource=PTP")
-    ptpclientconf = ptpconfig.format("unicast", 
-        "ptpengine:unicast_address=192.168.123.1")
-
     """ Start clients """
     script.write(
-    """start_client 1 ptpd2 "{}" \n""".format(ptpserverconf)
-    )
+        """start_client 1 chronyd "refclock SHM 0" \n"""
+        )
 
     for i in range(2, nodecount + 1):
-        script.write("""start_client {} ptpd2 "{}" \n"""
-            .format(i, ptpclientconf))
+        script.write("""start_client {} chronyd "server {} minpoll 4 maxpoll 6" \n"""
+            .format(i, ipaddress.IPv4Address("192.168.123.1")))
 
     """ Start experiment """
     timeLimit = 20000
@@ -106,20 +88,8 @@ def main():
     if (not os.path.isdir("./tmp")):
         os.mkdir("./tmp")
 
-    # config1(100, 0.01, "(+ 1e-6 (sum (* 1e-9 (normal))))", 
-    #     "(+ 1e-3 (* 1e-3 (exponential)))")
-
-    # TODO: change offset so each node starts at a different offset
-    # config1(10, 0.01, "(sum (* 2e-5 (normal)))", 
-    #     "(+ 1e-4 (* 7e-3 (poisson 5)))")
-    
-    # config1(10, 0.01, "(* 0.0001 (normal))", 
-    #     "(+ 1e-4 (* 7e-3 (poisson 5)))")
-
     config1(10, 0.01, "(sum (* 1e-8 (normal)))", 
         "(+ 1e-3 (* 1e-3 (exponential)))")
-
-    # configPerfectClocks(10)
 
 
 if __name__ == "__main__":
