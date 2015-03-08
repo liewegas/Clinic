@@ -12,9 +12,8 @@ def config1(nodecount, offset, freqexpr, delayexprup, delayexprdown = "", refclo
         conf += "node{}_offset = {}\n".format(i, i - 1)
 
         if (i == 1): 
-            conf += "node{}_freq = {}\n".format(i, freqexpr)
+            conf += "node{}_freq = {}\n".format(i, 0)
             conf += "node1_refclock = (* 0 0)\n"
-            
         else: 
             conf += "node{}_freq = {}\n".format(i, freqexpr)
 
@@ -25,7 +24,6 @@ def config1(nodecount, offset, freqexpr, delayexprup, delayexprdown = "", refclo
         else:
             conf += "node1_delay{} = {}\n".format(i, delayexprup)
 
-
     confFile = open("./tmp/conf", 'w')
 
     confFile.write(conf)
@@ -33,7 +31,7 @@ def config1(nodecount, offset, freqexpr, delayexprup, delayexprdown = "", refclo
     confFile.close()
 
 
-    scriptname = "cephchrony.dynamic.test"
+    scriptname = "cephptp.dynamic.test"
     createScript(nodecount, scriptname)
 
     subprocess.check_call("./{}".format(scriptname), 
@@ -51,12 +49,12 @@ def createScript(nodecount, scriptname):
 
     """ Start clients """
     script.write(
-        """start_client 1 chronyd "local stratum 1\n refclock SHM 0" \n"""
-        )
+    """start_client 1 ptp4l "clockClass 6" "" "-i eth0" \n"""
+    )
 
     for i in range(2, nodecount + 1):
-        script.write("""start_client {} chronyd "server {} minpoll 4 maxpoll 6" \n"""
-            .format(i, ipaddress.IPv4Address("192.168.123.1")))
+        script.write("""start_client {} ptp4l "" "" "-i eth0" \n"""
+            .format(i))
 
     """ Start experiment """
     timeLimit = 20000
