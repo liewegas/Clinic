@@ -59,9 +59,46 @@ def config2(nodecount, offset, freqexpr, refclockexpr = 0):
         else: 
             conf += "node{}_freq = {}\n".format(i, freqexpr)
 
-        conf += "node{}_delay1 = (file \"latencyValues{}.txt\")\n".format(i, i)
+        conf += "node{}_delay1 = (file \"../latencydata/latencyValues{}.txt\")\n".format(i, i)
         # we use a different latency file for the return trip than for the initial trip
-        conf += "node1_delay{} = (file \"latencyValues{}.txt\")\n".format(i, i + (nodecount - 1))
+        conf += "node1_delay{} = (file \"../latencydata/latencyValues{}.txt\")\n".format(i, i + (nodecount - 1))
+
+        # if (refclockexpr != ""):
+        #     conf += "node{}_refclock = {}\n".format(i, refclockexpr)
+
+    confFile = open("./tmp/conf", 'w')
+
+    confFile.write(conf)
+
+    confFile.close()
+
+
+    scriptname = "cephntp.dynamic.test"
+    createScript(nodecount, scriptname)
+
+    subprocess.check_call("./{}".format(scriptname), 
+        shell=True)
+
+# config3 is used to vary many different parameters for the purpose of running
+# multiple simulations in a row.
+def config3(nodecount, offset, freqexpr, refclockexpr = 0):
+    """ Generate client configs """
+    conf = ""
+
+    for i in range(1, nodecount + 1):
+        conf += "node{}_offset = {}\n".format(i, i - 1)
+
+        if (i == 1): 
+            #conf += "node{}_freq = {}\n".format(i, freqexpr)
+            conf += "node1_refclock = (* 0 0)\n"
+            conf += "node1_refclock = (sum (* 1e-8 (normal)))\n"
+            
+        else: 
+            conf += "node{}_freq = {}\n".format(i, freqexpr)
+
+        conf += "node{}_delay1 = (file \"../latencydata/latencyValues{}.txt\")\n".format(i, i)
+        # we use a different latency file for the return trip than for the initial trip
+        conf += "node1_delay{} = (file \"../latencydata/latencyValues{}.txt\")\n".format(i, i + (nodecount - 1))
 
         # if (refclockexpr != ""):
         #     conf += "node{}_refclock = {}\n".format(i, refclockexpr)
@@ -107,6 +144,11 @@ def configPerfectClocks(nodecount):
 
 
 def createScript(nodecount, scriptname):
+    createScriptWithFilePaths(nodecount, scriptname, 
+        "./tmp/log.timeoffset", "./tmp/log.freqoffset", "./tmp/log.ntp_esterror", 
+        "./tmp/log.ntp_status", "./tmp/log.ntp_timex_offset", "./tmp/log.packetdelays")
+
+def createScript(nodecount, scriptname):
 
     script = open("./{}".format(scriptname), 'w')
 
@@ -116,10 +158,12 @@ def createScript(nodecount, scriptname):
     script.write(". ../clknetsim.bash\n")
 
     """ Start clients """
+    # use bad clock on root node
     script.write(
         """start_client 1 ntp "server 127.127.1.0" \n"""
         )
-    #script.write(
+    # use good clock on root node
+    # script.write(
     #    """start_client 1 ntp "server 127.127.28.0" \n"""
     #    )
 
@@ -150,6 +194,10 @@ def createScript(nodecount, scriptname):
         shell=True)
 
 
+def multirun():
+
+
+
 
 
 def main():
@@ -169,6 +217,10 @@ def main():
 
     # config1(10, 0.01, "(sum (* 1e-8 (normal)))", 
     #     "(+ 1e-3 (* 1e-3 (exponential)))")
+
+
+    config2(10, 0.01, "(* 6.7e-7 (normal))")
+    # config2(10, 0.01, "(0 (* 1e-5 (normal)))")
 
 
     # configPerfectClocks(10)
