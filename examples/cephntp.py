@@ -3,6 +3,8 @@
 import os
 import ipaddress
 import subprocess
+import datetime
+import math
 
 def config1(nodecount, offset, freqexpr, delayexprup, delayexprdown = "", refclockexpr = 0):
     """ Generate client configs """
@@ -81,40 +83,61 @@ def config2(nodecount, offset, freqexpr, refclockexpr = 0):
 
 # config3 is used to vary many different parameters for the purpose of running
 # multiple simulations in a row.
-def config3(nodecount, offset, freqexpr, refclockexpr = 0):
+def config3():
     """ Generate client configs """
-    conf = ""
+    # the number of nodes in our simulation
+    nodecount = 2
+    time = str(datetime.datetime.now()).replace(" ", "_")
 
-    for i in range(1, nodecount + 1):
-        conf += "node{}_offset = {}\n".format(i, i - 1)
+    if (not os.path.isdir("./tmp")):
+        os.mkdir("./tmp")
+    os.mkdir("./tmp/{}".format(time))
 
-        if (i == 1): 
-            #conf += "node{}_freq = {}\n".format(i, freqexpr)
-            conf += "node1_refclock = (* 0 0)\n"
-            conf += "node1_refclock = (sum (* 1e-8 (normal)))\n"
-            
-        else: 
-            conf += "node{}_freq = {}\n".format(i, freqexpr)
+    # Clock Drift Variance Loop
+    for driftVariance in [1e-8*float(x) for x in range(1,11)]:
+        # Latency Alpha Value Loop
+        for alpha in [float(x) for x in range(1,11)]:
+            # Mean Latency Value Loop
+            for mean in [1e-3*float(x) for x in range(1,21)]:
 
-        conf += "node{}_delay1 = (file \"../latencydata/latencyValues{}.txt\")\n".format(i, i)
-        # we use a different latency file for the return trip than for the initial trip
-        conf += "node1_delay{} = (file \"../latencydata/latencyValues{}.txt\")\n".format(i, i + (nodecount - 1))
+                print("Running Test:")
+                print("\tDrift Variance:", driftVariance)
+                print("\tAlpha:", alpha)
+                print("\tMean:", mean)
+                percentCompletion = (((driftVariance *1e8) - 1) * 10) + (alpha - 1)
+                print("\tPercent Completion:", str(percentCompletion)+"%")
 
-        # if (refclockexpr != ""):
-        #     conf += "node{}_refclock = {}\n".format(i, refclockexpr)
+                directoryPath = "./tmp/{}/{:.2e}_{:.2e}_{:.2e}/".format(time, driftVariance, alpha, mean)
+                if (not os.path.isdir(directoryPath)):
+                    os.mkdir(directoryPath)
 
-    confFile = open("./tmp/conf", 'w')
+                freqexpr = "(sum (* {} (normal)))".format(math.sqrt(driftVariance))
+                conf = ""
 
-    confFile.write(conf)
+                theta = mean/alpha
+                for i in range(2, nodecount + 1):
+                    conf += "node{}_offset = {}\n".format(i, i - 1)
 
-    confFile.close()
+                    conf += "node{}_freq = {}\n".format(i, freqexpr)
+
+                    conf += "node{}_delay1 = (gamma {} {})\n".format(i, alpha, theta)
+                    conf += "node1_delay{} = (gamma {} {})\n".format(i, alpha, theta)
+
+                conf += "node1_refclock = (* 0 0)\n"
 
 
-    scriptname = "cephntp.dynamic.test"
-    createScript(nodecount, scriptname)
+                confFile = open("./tmp/conf", 'w')
 
-    subprocess.check_call("./{}".format(scriptname), 
-        shell=True)
+                confFile.write(conf)
+
+                confFile.close()
+
+
+                scriptname = "cephntp.dynamic.test"
+                createScript(nodecount, scriptname, directoryPath)
+
+                subprocess.check_call("./{}".format(scriptname), 
+                    shell=True)
 
 
 def configPerfectClocks(nodecount):
@@ -142,13 +165,13 @@ def configPerfectClocks(nodecount):
     subprocess.check_call("./{}".format(scriptname), 
         shell=True)
 
+def createScript(nodecount, scriptname, directoryPath = "./tmp/"):
 
-def createScript(nodecount, scriptname):
-    createScriptWithFilePaths(nodecount, scriptname, 
-        "./tmp/log.timeoffset", "./tmp/log.freqoffset", "./tmp/log.ntp_esterror", 
-        "./tmp/log.ntp_status", "./tmp/log.ntp_timex_offset", "./tmp/log.packetdelays")
-
-def createScript(nodecount, scriptname):
+    timeOffsetFilePath = directoryPath + "log.timeoffset" 
+    ntpOffsetFilePath = directoryPath + "log.ntp_maxerror"
+    ntpMaxErrorFilePath = directoryPath + "log.ntp_offset"
+    packetDelaysFilePath = directoryPath + "log.packetdelays"
+    print(packetDelaysFilePath)
 
     script = open("./{}".format(scriptname), 'w')
 
@@ -159,13 +182,13 @@ def createScript(nodecount, scriptname):
 
     """ Start clients """
     # use bad clock on root node
-    script.write(
-        """start_client 1 ntp "server 127.127.1.0" \n"""
-        )
-    # use good clock on root node
     # script.write(
-    #    """start_client 1 ntp "server 127.127.28.0" \n"""
-    #    )
+    #     """start_client 1 ntp "server 127.127.1.0" \n"""
+    #     )
+    # use good clock on root node
+    script.write(
+       """start_client 1 ntp "server 127.127.28.0" \n"""
+       )
 
     for i in range(2, nodecount + 1):
         script.write("""start_client {} ntp "server {} minpoll 4 maxpoll 6" \n"""
@@ -174,13 +197,11 @@ def createScript(nodecount, scriptname):
     """ Start experiment """
     timeLimit = 20000
 
-    script.write("start_server {} -v 2 -o ./tmp/log.timeoffset \
--g ./tmp/log.rawoffset -f ./tmp/log.freqoffset \
--a ./tmp/log.ntp_maxerror -b ./tmp/log.ntp_esterror \
--c ./tmp/log.ntp_offset -d ./tmp/log.ntp_status \
--e ./tmp/log.monotonic -i ./tmp/log.ntp_timex_offset \
--p ./tmp/log.packetdelays \
--l {} \n".format(nodecount, timeLimit))
+    script.write("start_server {} -v 2 -o {} \
+-a {} \
+-c {} \
+-p {} \
+-l {} \n".format(nodecount, timeOffsetFilePath, ntpOffsetFilePath, ntpMaxErrorFilePath, packetDelaysFilePath, timeLimit))
 
     """ Output statistics """
     script.write("cat tmp/stats\n")
@@ -192,10 +213,6 @@ def createScript(nodecount, scriptname):
 
     subprocess.check_call("chmod +x ./{}".format(scriptname), 
         shell=True)
-
-
-def multirun():
-
 
 
 
@@ -219,11 +236,12 @@ def main():
     #     "(+ 1e-3 (* 1e-3 (exponential)))")
 
 
-    config2(10, 0.01, "(* 6.7e-7 (normal))")
+    # config2(10, 0.01, "(* 6.7e-7 (normal))")
     # config2(10, 0.01, "(0 (* 1e-5 (normal)))")
 
 
     # configPerfectClocks(10)
+    config3()
 
 
 if __name__ == "__main__":
