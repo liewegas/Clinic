@@ -6,7 +6,6 @@ import sys
 import numpy
 import scipy
 import matplotlib
-# import multiprocessing.dummy
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import matplotlib as mpl
@@ -15,6 +14,13 @@ import itertools
 import csv
 from mpl_toolkits.mplot3d import Axes3D
 from numpy import log10
+
+# for floating point comparisons
+threshold = 1e-11
+
+# TODO:
+#	Get plot_surface to work, it should work and would be better than the triangle approach
+#	Verify that setting static points is working properly
 
 
 # Rows at the beginning of the file while the protocol is still trying to figure out what it should be doing
@@ -79,12 +85,17 @@ def processFolder(rootpath, folder, dataArray, index):
 	if (index % 100 == 0):
 		print "Processed folder %s" % index
 
-def make3dPlot(dataArray, cols, colNames, captionText, pathRoot):
+def make3dPlot(dataArray, cols, fixed, colNames, captionText, pathRoot, defaultVals):
 	""" expects a 3-ple of cols """
 
 	fig = plt.figure()
 	ax = fig.gca(projection='3d')
 	ax.view_init(elev=13, azim=-30)
+
+	filteredArray = dataArray
+	for col in fixed:
+		filteredArray = filteredArray[ (defaultVals[col]-threshold < filteredArray[:,col]) & 
+									   (defaultVals[col]+threshold > filteredArray[:,col]) ]
 
 	x = dataArray[:,cols[0]]
 	y = dataArray[:,cols[1]]
@@ -98,9 +109,14 @@ def make3dPlot(dataArray, cols, colNames, captionText, pathRoot):
 
 	strippedNames = map(lambda x: x.split('(')[0].strip(), [colNames[cols[2]], colNames[cols[1]], colNames[cols[0]]])
 
+	fixedText = "\nFixed Parameters = ("
+	for col in fixed:
+		fixedText += " " + colNames[col] + ": " + str(defaultVals[col]) + ","
+	fixedText = fixedText[:-1] + " )"
+
 	plt.suptitle("{} vs {} vs {}".format(*strippedNames))
-	plt.figtext(.1, .8, captionText, verticalalignment=u'baseline', size=u'x-small')
-	filename = "{}_{}_{}.svg".format(*strippedNames)
+	plt.figtext(.1, .8, captionText + fixedText, verticalalignment=u'baseline', size=u'x-small')
+	filename = "{}_{}_{}.png".format(*strippedNames)
 	plt.savefig(os.path.join(pathRoot, filename))
 	plt.close()
 	print 'saved file to %s' % filename
@@ -114,11 +130,13 @@ def getFolderName(path):
 	else:
 		return split[1]
 
-def main(rootpath, captionPath, outPath, paramNamesList):
+def main(rootpath, captionPath, outPath, defaults):
+	# split up defaults
+	paramNamesList = defaults[0::2]
+	defaultVals = map(float, defaults[1::2])
 
 	# calculate where to put the graphs
-	
-	outputDir = os.path.join(outPath, getFolderName(rootpath))
+	outputDir = os.path.join(outPath, getFolderName(os.path.realpath(rootpath)))
 	if (not os.path.isdir(outputDir)): 
 		os.mkdir(outputDir)
 
@@ -137,11 +155,14 @@ def main(rootpath, captionPath, outPath, paramNamesList):
 	# make the graphs
 	numberOfInputParams = len(paramNamesList)
 	allParams = paramNamesList + computedColNames
+
 	# pairs of input parameters
 	combinationsOfInputParams = [item for item in itertools.combinations(xrange(numberOfInputParams), 2)]
 	for outputCol in range(numberOfInputParams, dimensionsOfComputedData + numberOfInputParams):
 		for inputComb in combinationsOfInputParams:
-			make3dPlot(dataArray, inputComb+(outputCol,), allParams, captionText, outputDir)
+			fixed = list(set(range(numberOfInputParams)) - set(inputComb))
+			fixed.sort()
+			make3dPlot(dataArray, inputComb+(outputCol,), fixed, allParams, captionText, outputDir, defaultVals)
 
 
 
@@ -151,8 +172,8 @@ if __name__=="__main__":
 		print "\t 1. a directory argument containing the relevant directory structure"
 		print "\t 2. a file that contains a text caption to be appended to graphs"
 		print "\t 3. a directory path where figures should be saved"
-		print "\t 4. axis labels for simulation parameters"
+		print "\t 4. axis labels for simulation parameters followed by default for holding constant"
 		print
-		print 'Example: 3dPlot.py ./data ./caption_text ./figures "param1 (feet)" "param2 (s)" ... "paramN (k)"'
+		print 'Example: 3dPlot.py ./data ./caption_text ./figures "param1 (feet)" 3.4 "param2 (s)" 1.2e7 ... "paramN (k)" 0'
 	else:
 		main(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4:])
