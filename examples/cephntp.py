@@ -93,25 +93,27 @@ def config3():
         os.mkdir("./tmp")
     os.mkdir("./tmp/{}".format(time))
 
-    # Clock Drift Variance Loop
-    for driftVariance in [1e-8*float(x) for x in range(1,11)]:
+    latencyMeanTimes = [10**((float(x)/10.0) - 5) for x in range(31)]
+
+    # Clock Drift Std Deviation Loop
+    for driftStdDev in [1e-8*float(x) for x in range(1,11)]:
         # Latency Alpha Value Loop
         for alpha in [float(x) for x in range(1,11)]:
             # Mean Latency Value Loop
-            for mean in [1e-3*float(x) for x in range(1,21)]:
+            for mean in latencyMeanTimes:
 
                 print("Running Test:")
-                print("\tDrift Variance:", driftVariance)
-                print("\tAlpha:", alpha)
-                print("\tMean:", mean)
-                percentCompletion = (((driftVariance *1e8) - 1) * 10) + (alpha - 1)
-                print("\tPercent Completion:", str(percentCompletion)+"%")
+                print("\tDrift Std Deviation: {:.2e}".format(driftStdDev))
+                print("\tAlpha: {:.2e}".format(alpha))
+                print("\tMean: {:.2e}".format(mean))
+                percentCompletion = (((driftStdDev *1e8) - 1) * 10) + (alpha - 1)
+                print("\tPercent Completion: {:.2}%".format(percentCompletion))
 
-                directoryPath = "./tmp/{}/{:.2e}_{:.2e}_{:.2e}/".format(time, driftVariance, alpha, mean)
+                directoryPath = "./tmp/{}/{:.2e}_{:.2e}_{:.2e}/".format(time, driftStdDev, alpha, mean)
                 if (not os.path.isdir(directoryPath)):
                     os.mkdir(directoryPath)
 
-                freqexpr = "(sum (* {} (normal)))".format(math.sqrt(driftVariance))
+                freqexpr = "(sum (* {} (normal)))".format(driftStdDev)
                 conf = ""
 
                 theta = mean/alpha
@@ -236,12 +238,12 @@ def main():
     #     "(+ 1e-3 (* 1e-3 (exponential)))")
 
 
-    # config2(10, 0.01, "(* 6.7e-7 (normal))")
+    config2(10, 0.01, "(* 6.7e-7 (normal))")
     # config2(10, 0.01, "(0 (* 1e-5 (normal)))")
 
 
     # configPerfectClocks(10)
-    config3()
+    # config3()
 
 
 if __name__ == "__main__":
