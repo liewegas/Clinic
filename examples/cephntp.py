@@ -40,12 +40,10 @@ def generalConfig(nodecount, freqexpr, delayexprup, delayexprdown = ""):
         else:
             conf += "node1_delay{} = {}\n".format(i, delayexprup)
 
+    # Open and write the config file
     confFile = open("./tmp/conf", 'w')
-
     confFile.write(conf)
-
     confFile.close()
-
 
     scriptname = "cephntp.dynamic.test"
     createScript(nodecount, scriptname)
@@ -79,12 +77,10 @@ def realLatencyConfig(nodecount, freqexpr, latencyValuesDir = "../latencydata"):
         # we use a different latency file for the return trip than for the initial trip
         conf += "node1_delay{} = (file \"{}/latencyValues{}.txt\")\n".format(i, latencyValuesDir, i + (nodecount - 1))
 
+    # Open and write the config file
     confFile = open("./tmp/conf", 'w')
-
     confFile.write(conf)
-
     confFile.close()
-
 
     scriptname = "cephntp.dynamic.test"
     createScript(nodecount, scriptname)
@@ -159,19 +155,18 @@ def multiRunConfig():
                     conf += "node{}_delay1 = (gamma {} {})\n".format(i, alpha, theta)
                     conf += "node1_delay{} = (gamma {} {})\n".format(i, alpha, theta)
 
-                conf += "node1_refclock = (* 0 0)\n"
+                # Set the reference clock (the really good clock) for the NTP server
+                conf += "node1_refclock = (* 0 0)\n" # A perfect clock is (* 0 0)
 
-
+                # Open and write the config file
                 confFile = open("./tmp/conf", 'w')
-
                 confFile.write(conf)
-
                 confFile.close()
-
 
                 scriptname = "cephntp.dynamic.test"
                 createScript(nodecount, scriptname, directoryPath)
 
+                # Start everything running
                 subprocess.check_call("./{}".format(scriptname), 
                     shell=True)
 
@@ -190,18 +185,18 @@ def configPerfectClocks(nodecount):
         conf += "node{}_delay1 = (+ 0 0.001)\n".format(i)
         conf += "node1_delay{} = (+ 0 0.001)\n".format(i)
 
-    conf += "node1_refclock = (* 0 0)\n"
+    # Set the reference clock (the really good clock) for the NTP server
+    conf += "node1_refclock = (* 0 0)\n" # A perfect clock is (* 0 0)
 
+    # Open and write the config file
     confFile = open("./tmp/conf", 'w')
-
     confFile.write(conf)
-
     confFile.close()
-
 
     scriptname = "cephntp.dynamic.test"
     createScript(nodecount, scriptname)
 
+    # Start everything running
     subprocess.check_call("./{}".format(scriptname), 
         shell=True)
 
