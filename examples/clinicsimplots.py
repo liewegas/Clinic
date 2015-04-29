@@ -1,9 +1,22 @@
 #!/usr/bin/env python2
 
+# clinicsimplots.py contains a number of functions that analyze output from the clknetsim
+# simulations and produces plots and statistics about that data. It requires
+# data from:
+#     1) log.timeoffset
+#     2) log.ntp_offset
+#     3) log.ntp_maxerror
+#     4) log.packetdelays
+# which are all created by clknetsim. The filepaths need to be specified in the
+# file, using the global filename variables. The plots are saved in the directory
+# that contains clinicsimplots.py. The plots and stats that are generated are 
+# specified in the function comments.
+
 import sys
 import numpy as np
 import matplotlib.pyplot as plt
 import pylab
+import argparse
 
 
 # These file paths would need to be changed if the simulation output is placed
@@ -178,11 +191,43 @@ def extractOverviewOffsetData():
 
     plt.show()
 
+
+realOffsetFilePath = "tmp/log.timeoffset"
+ntpOffsetFilePath = "tmp/log.ntp_offset"
+maxErrorFilePath = "tmp/log.ntp_maxerror"
+packetDelayFilePath = "tmp/log.packetdelays"
 # uncomment the desired function to run it.
 def main():
-    # plotNTPVsRealOffset()
-    # plotLatencyVsError()
-    # extractOverviewOffsetData()
+    parser = argparse.ArgumentParser()
+
+    # creates an argument that captures the file paths for the files needed by
+    # this program
+    parser.add_argument("-f", "--filepaths", 
+        action = 'append', 
+        nargs = 4, 
+        default = ["tmp/log.timeoffset", "tmp/log.ntp_offset", 
+                   "tmp/log.ntp_offset", "tmp/log.packetdelays"],
+        help = "specifies the file paths for the logged data required")
+
+    parser.add_argument("-p", "--plotOffsets", 
+                        action = "store_true",
+                        help = "use to plot NTP offset vs. the real offset")
+    parser.add_argument("-l", "--latency", action = "store_true",
+                        help = "use to plot the latency vs. the uncertainty")
+    parser.add_argument("-o", "--overview", action = "store_true",
+                        help = "use to extract overview about offset data")
+
+    space = parser.parse_args()
+
+    # stores the file paths in the proper variables
+    realOffsetFilePath, ntpOffsetFilePath, maxErrorFilePath, packetDelayFilePath = space.filepaths
+
+    if space.plotOffsets:
+        plotNTPVsRealOffset()
+    if space.latency:
+        plotLatencyVsError()
+    if space.overview:
+        extractOverviewOffsetData()
 
 
 if __name__ == "__main__":
