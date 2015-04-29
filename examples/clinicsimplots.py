@@ -206,10 +206,10 @@ def main():
         default = "tmp",
         help = "specifies the directory for the logged data files.\
                 The directory must include the following files: \
-                \n\tlog.timeoffset\
-                \n\tlog.ntp_offset\
-                \n\tlog.ntp_maxerror\
-                \n\tlog.packetdelays")
+                log.timeoffset; \
+                log.ntp_offset; \
+                log.ntp_maxerror; \
+                log.packetdelays")
 
     # If set, it runs plotNTPVsRealOffset
     parser.add_argument("-p", "--plotOffsets", action = "store_true",
