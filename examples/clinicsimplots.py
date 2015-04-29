@@ -8,7 +8,7 @@
 #     3) log.ntp_maxerror
 #     4) log.packetdelays
 # which are all created by clknetsim. The filepaths need to be specified in the
-# file, using the global filename variables. The plots are saved in the directory
+# arguments to the program. The plots are saved in the directory
 # that contains clinicsimplots.py. The plots and stats that are generated are 
 # specified in the function comments.
 
@@ -19,12 +19,11 @@ import pylab
 import argparse
 
 
-# These file paths would need to be changed if the simulation output is placed
-# somewhere else.
-realOffsetFilePath = "tmp/log.timeoffset"
-ntpOffsetFilePath = "tmp/log.ntp_offset"
-maxErrorFilePath = "tmp/log.ntp_maxerror"
-packetDelayFilePath = "tmp/log.packetdelays"
+# global filepath variables
+realOffsetFilePath = ""
+ntpOffsetFilePath = ""
+maxErrorFilePath = ""
+packetDelayFilePath = ""
 
 def getValuesFromFile(fileName, valueIndex):
     with open(fileName, 'r') as theFile:
@@ -36,6 +35,7 @@ def getValuesFromFile(fileName, valueIndex):
         #   3) converts that value to a float
         # it also ignores the last line of the file, because the last line is blank
         values = [float(line.split()[valueIndex]) for line in lines[:-1]]
+        return values
 
 
 # We use this function to plot graphs that show how NTP's actual error in time
@@ -45,9 +45,8 @@ def getValuesFromFile(fileName, valueIndex):
 # plot the uncertainty and the uncertainty negated, so that we can see if the
 # error stays within the uncertainty range.
 def plotNTPVsRealOffset():
-
     ntpOffsetValues = getValuesFromFile(ntpOffsetFilePath, 1)
-    realOffsetValues = getValuesFromFile(realOffsetValues, 1)
+    realOffsetValues = getValuesFromFile(realOffsetFilePath, 1)
     errorValues = getValuesFromFile(maxErrorFilePath, 1)
     # These values are in microseconds; we want them in seconds.
     errorValues = [x/1000000.0 for x in errorValues]
@@ -149,13 +148,19 @@ def plotLatencyVsError():
 # After the plot is made, five values are printed: the safety buffers maximum
 # value, its minimum value, its average, and its average +/- its standard
 # deviation. 
-def extractOverviewOffsetData():
+def plotAndExtractSafetyBufferData():
     ntpOffsetValues = []
     realOffsetValues = []
     errorValues = []
     safetyBufferValues = []
 
-    numNodes = len(ntpOffsetLines[0].split())
+    numNodes = 0
+
+    # all of this is done to calculate the number of nodes...
+    with open(ntpOffsetFilePath, 'r') as theFile:
+        firstLine = theFile.readline()
+        numNodes = len(firstLine.split())
+
     # We ignore the first 1500 values because NTP needs to take that time to
     # synchronize the nodes. Those values aren't valid.
     for i in range(1, numNodes):
@@ -182,52 +187,58 @@ def extractOverviewOffsetData():
     average = sum(safetyBufferValues) / float(len(safetyBufferValues))
     stdDev = np.std(safetyBufferValues)
 
-    print "Safety Buffer Stats"
+    print "Safety Buffer Stats:"
     print "Max:", max(safetyBufferValues)
     print "+Standard Deviation:", average + stdDev
     print "Average:", average
     print "-Standard Deviation:", average - stdDev
     print "Min:", min(safetyBufferValues)
 
-    plt.show()
+    pylab.savefig("images/safetybuffer.png")
 
-
-realOffsetFilePath = "tmp/log.timeoffset"
-ntpOffsetFilePath = "tmp/log.ntp_offset"
-maxErrorFilePath = "tmp/log.ntp_maxerror"
-packetDelayFilePath = "tmp/log.packetdelays"
-# uncomment the desired function to run it.
 def main():
+    global realOffsetFilePath, ntpOffsetFilePath, maxErrorFilePath, packetDelayFilePath
     parser = argparse.ArgumentParser()
 
-    # creates an argument that captures the file paths for the files needed by
-    # this program
-    parser.add_argument("-f", "--filepaths", 
-        action = 'append', 
-        nargs = 4, 
-        default = ["tmp/log.timeoffset", "tmp/log.ntp_offset", 
-                   "tmp/log.ntp_offset", "tmp/log.packetdelays"],
-        help = "specifies the file paths for the logged data required")
+    # creates an argument that captures the directory the logged data files are in
+    parser.add_argument("-d", "--directory", 
+        action = 'store',
+        default = "tmp",
+        help = "specifies the directory for the logged data files.\
+                The directory must include the following files: \
+                \n\tlog.timeoffset\
+                \n\tlog.ntp_offset\
+                \n\tlog.ntp_maxerror\
+                \n\tlog.packetdelays")
 
-    parser.add_argument("-p", "--plotOffsets", 
-                        action = "store_true",
-                        help = "use to plot NTP offset vs. the real offset")
+    # If set, it runs plotNTPVsRealOffset
+    parser.add_argument("-p", "--plotOffsets", action = "store_true",
+                        help = "use to plot NTP offset and the real offseti over time")
+    # If set, it runs plotLatencyVsError
     parser.add_argument("-l", "--latency", action = "store_true",
-                        help = "use to plot the latency vs. the uncertainty")
+                        help = "use to plot the latency and the uncertainty over time")
+    # If set, it runs plotAndExtractSafetyBufferData
     parser.add_argument("-o", "--overview", action = "store_true",
-                        help = "use to extract overview about offset data")
+                        help = "use to plot the safety buffer over time and to extract data about the safety buffer")
 
-    space = parser.parse_args()
+    argSpace = parser.parse_args()
 
     # stores the file paths in the proper variables
-    realOffsetFilePath, ntpOffsetFilePath, maxErrorFilePath, packetDelayFilePath = space.filepaths
+    realOffsetFilePath = argSpace.directory + "/log.timeoffset"
+    ntpOffsetFilePath = argSpace.directory + "/log.ntp_offset"
+    maxErrorFilePath = argSpace.directory + "/log.ntp_maxerror"
+    packetDelayFilePath = argSpace.directory + "/log.packetdelays"
 
-    if space.plotOffsets:
+
+    if argSpace.plotOffsets:
+        print "Plotting NTP offset and the real offset over time"
         plotNTPVsRealOffset()
-    if space.latency:
+    if argSpace.latency:
+        print "Plotting the latency and the uncertainty over time"
         plotLatencyVsError()
-    if space.overview:
-        extractOverviewOffsetData()
+    if argSpace.overview:
+        print "Plotting the safety buffer and extracting data about the safety buffer"
+        plotAndExtractSafetyBufferData()
 
 
 if __name__ == "__main__":
