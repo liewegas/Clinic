@@ -290,16 +290,16 @@ def main():
     # config(10, 0.01, "(* 0.0001 (normal))", 
     #     "(+ 1e-4 (* 7e-3 (poisson 5)))")
 
-    # config(10, 0.01, "(sum (* 1e-8 (normal)))", 
-    #     "(+ 1e-3 (* 1e-3 (exponential)))")
+    #generalConfig(10, "(sum (* 1e-8 (normal)))", 
+    #    "(+ 1e-3 (* 1e-3 (exponential)))")
 
 
-    realLatencyConfig(10, 0.01, "(* 6.7e-7 (normal))")
-    # realLatencyConfig(10, 0.01, "(0 (* 1e-5 (normal)))")
+    #realLatencyConfig(10, "(* 6.7e-7 (normal))")
+    # realLatencyConfig(10, "(0 (* 1e-5 (normal)))")
 
 
     # configPerfectClocks(10)
-    # multiRunConfig()
+    multiRunConfig()
 
 
 if __name__ == "__main__":
