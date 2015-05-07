@@ -1,7 +1,8 @@
 clinicceph
 ==========
 
-Repo for Ceph Clinic 2014
+Repo for Ceph Clinic 2014, created by combining two separate clinic repos.
+Pardon .gitignore and git history oddness.
 
 
 ### cephntp.py
